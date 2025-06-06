@@ -1,4 +1,5 @@
 # Cerberus: A Comprehensive Framework for Evaluating the Robustness of Intrusion Detection Systems
+![](./pic/framework.png)
 **Cerberus**: a comprehensive, data-driven framework for evaluating the robustness of IDSs under adversarial conditions. Cerberus is designed to model two distinct but realistic adversarial strategies:  
 - **Data poisoning attacks** targeting the **training phase**, and  
 - **Mimicry attacks** targeting the **inference phase**.
