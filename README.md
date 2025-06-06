@@ -6,17 +6,6 @@ It supports both DARPA CDM and ATLAS S1 datasets, provides flexible data poisoni
 
 ---
 
-## Features
-
-- **DARPA CDM & ATLAS S1 dataset compatibility**
-- **Configurable poisoning and mimicry attack evaluation**
-- **Training/test split, flexible modes**
-- **Optional benign dictionary filtering**
-- **Original-format output for both datasets**
-- **Ready-to-use with [MAGIC](https://github.com/FDUDSDE/MAGIC) and [Airtag](https://github.com/dhl123/Airtag-2023)**
-
----
-
 ## Installation
 
 Requires Python 3.7+ and numpy:
