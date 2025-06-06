@@ -13,7 +13,6 @@ It supports both DARPA CDM and ATLAS S1 datasets, provides flexible data poisoni
 - **Training/test split, flexible modes**
 - **Optional benign dictionary filtering**
 - **Original-format output for both datasets**
-- **Automatic DAD, FPA, ESR calculation scripts**
 - **Ready-to-use with [MAGIC](https://github.com/FDUDSDE/MAGIC) and [Airtag](https://github.com/dhl123/Airtag-2023)**
 
 ---
