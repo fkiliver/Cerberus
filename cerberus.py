@@ -236,33 +236,33 @@ def save_s1_format(events: List[Tuple[dict, int]], s1_dir: str, output_prefix: s
             f2.write(line + "\n")
 
 def run_framework(args):
+    # ATLAS S1 branch
     if args.dataset.lower() == "s1" or args.dataset.lower() == "atlas_s1":
-        print("[*] Detected ATLAS S1 dataset format, automatically enabling S1 parser")
+        print("[*] Detected ATLAS S1 dataset format, using S1 parser")
         dataset_dir = f"./dataset/S1/logs"
         label_npy_path = os.path.join(dataset_dir, "S1_number_.npy")
         events = parse_atlas_s1_logs_with_label(dataset_dir, label_npy_path)
-        print(f"[*] Total S1 log lines: {len(events)} lines, malicious: {sum(1 for _, label in events if label == 1)} lines")
+        print(f"[*] Total S1 log lines: {len(events)}, malicious: {sum(1 for _, label in events if label == 1)}")
         event_dict = set()
         train_set, test_set = split_data(events, args.split)
         mal_set = [item for item in test_set if item[1] == 1]
         benign_train_set = [item for item in train_set if item[1] == 0]
-
         if args.mode == 'train':
-            print("[*] Only performing training phase poisoning evaluation")
+            print("[*] Training phase poisoning only")
             poisoned_train = poison_training(benign_train_set, mal_set, args.num, event_dict, args.dict_filter)
             save_s1_format(poisoned_train, dataset_dir, "cerberus_train")
             save_s1_format(test_set, dataset_dir, "cerberus_test")
             print(f"[+] Output: {dataset_dir}/cerberus_train_firefox.txt & _dns")
             print(f"[+] Output: {dataset_dir}/cerberus_test_firefox.txt & _dns")
         elif args.mode == 'infer':
-            print("[*] Only performing inference phase poisoning evaluation")
+            print("[*] Inference phase poisoning only")
             modified_test = mimicry_inference(test_set, mal_set, args.num, event_dict, args.dict_filter)
             save_s1_format(train_set, dataset_dir, "cerberus_train")
             save_s1_format(modified_test, dataset_dir, "cerberus_test")
             print(f"[+] Output: {dataset_dir}/cerberus_train_firefox.txt & _dns")
             print(f"[+] Output: {dataset_dir}/cerberus_test_firefox.txt & _dns")
         elif args.mode == 'both':
-            print("[*] Performing comprehensive poisoning evaluation")
+            print("[*] Comprehensive poisoning evaluation")
             n1 = args.num // 2
             n2 = args.num - n1
             poisoned_train = poison_training(benign_train_set, mal_set, n1, event_dict, args.dict_filter)
@@ -271,7 +271,56 @@ def run_framework(args):
             save_s1_format(modified_test, dataset_dir, "cerberus_test")
             print(f"[+] Output: {dataset_dir}/cerberus_train_firefox.txt & _dns")
             print(f"[+] Output: {dataset_dir}/cerberus_test_firefox.txt & _dns")
-        return  # S1 process returns here
+        return  # Exit after S1 branch
+
+    # Custom dataset branch
+    elif args.dataset.lower() == "custom":
+        print("[*] Custom dataset detected. Using custom_parser interface.")
+        custom_dir = f"./dataset/custom"
+        try:
+            import importlib.util
+            parser_path = os.path.join(os.path.dirname(__file__), "custom_parser.py")
+            spec = importlib.util.spec_from_file_location("custom_parser", parser_path)
+            custom_parser = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(custom_parser)
+            events = custom_parser.parse_custom_dataset(custom_dir)
+        except Exception as e:
+            print("[!] Error in custom dataset parser:", e)
+            return
+        print(f"[*] Custom dataset total events: {len(events)}, malicious: {sum(1 for _, label in events if label == 1)}")
+        event_dict = set()
+        train_set, test_set = split_data(events, args.split)
+        mal_set = [item for item in test_set if item[1] == 1]
+        benign_train_set = [item for item in train_set if item[1] == 0]
+        train_output_path = os.path.join(custom_dir, "cerberus_train.json")
+        test_output_path = os.path.join(custom_dir, "cerberus_test.json")
+        if args.mode == 'train':
+            print("[*] Training phase poisoning only")
+            poisoned_train = poison_training(benign_train_set, mal_set, args.num, event_dict, args.dict_filter)
+            save_json_lines(poisoned_train, train_output_path)
+            save_json_lines(test_set, test_output_path)
+            print(f"[+] Output: {train_output_path} training set")
+            print(f"[+] Output: {test_output_path} test set")
+        elif args.mode == 'infer':
+            print("[*] Inference phase poisoning only")
+            modified_test = mimicry_inference(test_set, mal_set, args.num, event_dict, args.dict_filter)
+            save_json_lines(train_set, train_output_path)
+            save_json_lines(modified_test, test_output_path)
+            print(f"[+] Output: {train_output_path} training set")
+            print(f"[+] Output: {test_output_path} test set")
+        elif args.mode == 'both':
+            print("[*] Comprehensive poisoning evaluation")
+            n1 = args.num // 2
+            n2 = args.num - n1
+            poisoned_train = poison_training(benign_train_set, mal_set, n1, event_dict, args.dict_filter)
+            modified_test = mimicry_inference(test_set, mal_set, n2, event_dict, args.dict_filter)
+            save_json_lines(poisoned_train, train_output_path)
+            save_json_lines(modified_test, test_output_path)
+            print(f"[+] Output: {train_output_path} training set")
+            print(f"[+] Output: {test_output_path} test set")
+        return  # Exit after custom branch
+
+    # Default: DARPA/trace
     else:
         dataset_dir = f"./dataset/{args.dataset}"
         label_path = os.path.join(dataset_dir, "label.txt")
@@ -280,31 +329,28 @@ def run_framework(args):
         malicious_lines = load_malicious_lines(label_path)
         event_dict = load_event_dict(dict_path)
         events = load_dataset_files(dataset_dir, malicious_lines)
-        print(f"[*] Total dataset lines: {len(events)} lines, malicious: {len(malicious_lines)} lines")
-
+        print(f"[*] Total dataset lines: {len(events)}, malicious: {len(malicious_lines)}")
         train_set, test_set = split_data(events, args.split)
         mal_set = [item for item in test_set if item[1] == 1]
         benign_train_set = [item for item in train_set if item[1] == 0]
-
         train_output_path = os.path.join(dataset_dir, "cerberus_train.json")
         test_output_path = os.path.join(dataset_dir, "cerberus_test.json")
-
         if args.mode == 'train':
-            print("[*] Only performing training phase poisoning evaluation")
+            print("[*] Training phase poisoning only")
             poisoned_train = poison_training(benign_train_set, mal_set, args.num, event_dict, args.dict_filter)
             save_json_lines(poisoned_train, train_output_path)
             save_json_lines(test_set, test_output_path)
             print(f"[+] Output: {train_output_path} training set")
             print(f"[+] Output: {test_output_path} test set")
         elif args.mode == 'infer':
-            print("[*] Only performing inference phase poisoning evaluation")
+            print("[*] Inference phase poisoning only")
             modified_test = mimicry_inference(test_set, mal_set, args.num, event_dict, args.dict_filter)
             save_json_lines(train_set, train_output_path)
             save_json_lines(modified_test, test_output_path)
             print(f"[+] Output: {train_output_path} training set")
             print(f"[+] Output: {test_output_path} test set")
         elif args.mode == 'both':
-            print("[*] Performing comprehensive poisoning evaluation")
+            print("[*] Comprehensive poisoning evaluation")
             n1 = args.num // 2
             n2 = args.num - n1
             poisoned_train = poison_training(benign_train_set, mal_set, n1, event_dict, args.dict_filter)
@@ -313,6 +359,7 @@ def run_framework(args):
             save_json_lines(modified_test, test_output_path)
             print(f"[+] Output: {train_output_path} training set")
             print(f"[+] Output: {test_output_path} test set")
+
 
 if __name__ == '__main__':
     args = parse_args()

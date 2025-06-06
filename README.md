@@ -43,6 +43,14 @@ pip install numpy
 
 - To filter candidate benign events by a predefined dictionary, create `event_dictionary.txt` in the root directory. Each line should list a benign process or event name.
 
+### 4. **Custom Dataset Support**
+
+Cerberus allows easy integration with any custom dataset by providing your own Python parser.  
+- Place your custom logs under `dataset/custom/` (any format you like).
+- Implement a parser function named `parse_custom_dataset(custom_dir)` in `custom_parser.py` (in the project root).
+- This function should return a list of `(event_dict, label)` pairs (label: `0` for benign, `1` for malicious).
+- See `custom_parser.py` for an example template.
+
 ---
 
 ## Running Cerberus
@@ -60,7 +68,7 @@ python cerberus.py --dataset trace --num 500 --mode both
 
 ### Arguments:
 
-- `--dataset`  Name of the dataset: `trace` for DARPA, `S1` for ATLAS S1
+- `--dataset`  Name of the dataset: `trace` for DARPA, `S1` for ATLAS S1, or `custom` for your own dataset
 - `--num`    Number of events to inject (e.g., 100–1000)
 - `--split`   Training/test split ratio (default: 0.7)
 - `--mode`   Evaluation mode: `train`, `infer`, or `both`
@@ -69,36 +77,45 @@ python cerberus.py --dataset trace --num 500 --mode both
 ### Example Commands:
 
 - **DARPA, 500 poisoned events, using dictionary filtering:**
-  ```bash
-  python cerberus.py --dataset trace --num 500 --mode both --dict_filter
-  ```
+```bash
+python cerberus.py --dataset trace --num 500 --mode both --dict_filter
+```
 
 - **ATLAS S1, test set evasion only:**
-  ```bash
-  python cerberus.py --dataset S1 --num 300 --mode infer
-  ```
+```bash
+python cerberus.py --dataset S1 --num 300 --mode infer
+```
+
+- **Custom dataset, 200 poisoned events:**
+```bash
+python cerberus.py --dataset custom --num 200 --mode train
+```
 
 ---
 
 ## Output Details
 
 - **DARPA (trace):**
-  - Outputs: `cerberus_train.json` and `cerberus_test.json`
-  - Format: standard CDM JSON Lines
+- Outputs: `cerberus_train.json` and `cerberus_test.json`
+- Format: standard CDM JSON Lines
 
 - **ATLAS S1:**
-  - Outputs native-format logs under `dataset/S1/logs/`:
-    - `cerberus_train_firefox.txt`, `cerberus_train_dns`
-    - `cerberus_test_firefox.txt`, `cerberus_test_dns`
+- Outputs native-format logs under `dataset/S1/logs/`:
+- `cerberus_train_firefox.txt`, `cerberus_train_dns`
+- `cerberus_test_firefox.txt`, `cerberus_test_dns`
+
+- **Custom dataset:**
+- Outputs: `cerberus_train.json` and `cerberus_test.json` in your custom data folder
+- Format: each line is a JSON event as returned by your parser
 
 These outputs are fully compatible with IDS pipelines such as MAGIC and Airtag.
 
 ---
 
-## Using MAGIC and Airtag
+## Using MAGIC, Airtag, or Your Own IDS
 
-Cerberus is designed to work seamlessly with two representative IDS tools:
-
+Cerberus is designed for seamless integration with any IDS pipeline.  
+**Built-in support for:**
 - [MAGIC (FDUDSDE)](https://github.com/FDUDSDE/MAGIC)
 - [Airtag (DHL123)](https://github.com/dhl123/Airtag-2023)
 
@@ -106,30 +123,36 @@ Cerberus is designed to work seamlessly with two representative IDS tools:
 
 - Follow the MAGIC repo instructions for training/testing.
 - Save the console output containing:
-  ```
-  TN: ...
-  FN: ...
-  TP: ...
-  FP: ...
-  ```
-  into:
-  - `magic_result.txt` (attacked output)
-  - `magic_baseline.txt` (clean baseline)
+```
+TN: ...
+FN: ...
+TP: ...
+FP: ...
+```
+into:
+- `magic_result.txt` (attacked output)
+- `magic_baseline.txt` (clean baseline)
 
 ### 2. Running Airtag
 
 - Follow the Airtag repo instructions for execution.
 - Save the test result block like:
-  ```
-  test1
-  <TP>
-  <FN>
-  <FP>
-  <TN>
-  ```
-  into:
-  - `airtag_result.txt` (attacked output)
-  - `airtag_baseline.txt` (clean baseline)
+```
+test1
+<TP>
+<FN>
+<FP>
+<TN>
+```
+into:
+- `airtag_result.txt` (attacked output)
+- `airtag_baseline.txt` (clean baseline)
+
+### 3. **Running Your Own IDS**
+
+Cerberus outputs are standard JSON lines or text logs.  
+- You can plug any IDS or anomaly detector into the Cerberus evaluation workflow.
+- For custom metrics, you can script your own evaluation using the output files.
 
 ---
 
@@ -138,6 +161,7 @@ Cerberus is designed to work seamlessly with two representative IDS tools:
 ```bash
 python magic_eval.py
 python airtag_eval.py
+# or your own script for custom IDS
 ```
 
 ### Sample Output:
@@ -159,3 +183,4 @@ ESR: 0.003210
 ---
 
 **Cerberus: A comprehensive, reproducible, and scalable framework for stress-testing IDS robustness.**
+```
