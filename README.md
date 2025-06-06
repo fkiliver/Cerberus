@@ -2,6 +2,7 @@
 
 Cerberus is an extensible, data-driven framework for evaluating the robustness of intrusion detection systems (IDS).  
 It supports both DARPA CDM and ATLAS S1 datasets, provides flexible data poisoning and evasion evaluation modes, dictionary-based event filtering, and exports outputs in native formats. Cerberus also provides automated scripts for quantitative metrics evaluation in line with academic standards.
+![](./pic/framework.png)
 
 ---
 
