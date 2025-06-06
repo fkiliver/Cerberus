@@ -82,28 +82,6 @@ python cerberus.py --dataset trace --num 500 --mode both
 
 Cerberus includes scripts to calculate DAD, FPA, and ESR based on your model outputs. These scripts require both poisoned and baseline (clean) results as input.
 
-### Metric Definitions
-
-- **Detection Accuracy Degradation (DAD):**
-  \[
-  DAD = \frac{A_b - A_a}{A_b}
-  \]
-  where \(A_b\) is baseline accuracy, \(A_a\) is attacked accuracy.
-
-- **False Positive Amplification (FPA):**
-  \[
-  FPA = \frac{F_a - F_b}{F_b + \epsilon}
-  \]
-  where \(F_b\) is baseline FPR, \(F_a\) is attacked FPR, \(\epsilon=0.01\).
-
-- **Evasion Success Rate (ESR):**
-  \[
-  ESR = \frac{FN}{TP + FN}
-  \]
-  where \(FN\) is number of false negatives, \(TP\) is number of true positives.
-
----
-
 ## Using MAGIC and Airtag
 
 You can directly use [MAGIC](https://github.com/FDUDSDE/MAGIC) and [Airtag](https://github.com/dhl123/Airtag-2023) with Cerberus output and metrics scripts.
