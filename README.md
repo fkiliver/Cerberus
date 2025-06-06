@@ -1,14 +1,25 @@
 # Cerberus: A Comprehensive Framework for Evaluating the Robustness of Intrusion Detection Systems
+**Cerberus**: a comprehensive, data-driven framework for evaluating the robustness of IDSs under adversarial conditions. Cerberus is designed to model two distinct but realistic adversarial strategies:  
+- **Data poisoning attacks** targeting the **training phase**, and  
+- **Mimicry attacks** targeting the **inference phase**.
 
-Cerberus is an extensible, data-driven framework for evaluating the robustness of intrusion detection systems (IDS).  
-It supports both DARPA CDM and ATLAS S1 datasets, provides flexible data poisoning and evasion evaluation modes, dictionary-based event filtering, and exports outputs in native formats. Cerberus also provides automated scripts for quantitative metrics evaluation in line with academic standards.
-![](./pic/framework.png)
+These attack models represent key threat vectors that adversaries can exploit to either degrade the learning of IDSs or bypass detection during runtime.
+
+Cerberus further introduces a principled evaluation methodology, including:
+- Three robustness metrics: **Detection Accuracy Degradation (DAD)**, **False Positive Amplification (FPA)**, and **Evasion Success Rate (ESR)**
+- An **estimated metric benchmarking** method to contextualize evaluation results
+
+We use Cerberus to analyze two representative IDS paradigms:
+- **Sequence-based IDSs**, evaluated using [Airtag](https://github.com/dhl123/Airtag-2023)
+- **Provenance-based IDSs**, evaluated using [MAGIC](https://github.com/FDUDSDE/MAGIC)
+
+Our results show that even state-of-the-art IDS solutions are highly vulnerable to straightforward adversarial scenarios simulated by Cerberus, posing a significant threat to the integrity of the critical systems they are intended to protect.
 
 ---
 
 ## Installation
 
-Requires Python 3.7+ and numpy:
+Cerberus requires Python 3.7+ and NumPy:
 
 ```bash
 pip install numpy
@@ -18,47 +29,50 @@ pip install numpy
 
 ## Dataset Preparation
 
-### 1. DARPA CDM Dataset
+### 1. DARPA CDM Dataset (Example: `trace`)
 
-- Place raw CDM event files (e.g. `ta1-trace-e3-official-1.json` and any split files) in `dataset/trace/`.
-- Place the label file `lable.txt` (one malicious line number per line, starting from 1) in the same directory.
+- Place CDM JSON event files (e.g., `ta1-trace-e3-official-1.json`, `*.1`, `*.2`, etc.) under `dataset/trace/`.
+- Place the label file `lable.txt` in the same directory. Each line should contain a line number (starting from 1) corresponding to a known malicious event.
 
-### 2. ATLAS S1 Dataset
+### 2. ATLAS Dataset (Example: S1 Subset)
 
-- Place `firefox.txt`, `dns`, and `S1_number_.npy` (NumPy array with malicious line indices, 0-based) under `dataset/S1/logs/`.
+- Place `firefox.txt`, `dns`, and the NumPy label file `S1_number_.npy` (containing 0-based indices of malicious lines) under `dataset/S1/logs/`.
 
 ### 3. Benign Event/Process Dictionary (Optional)
 
-- Place event/process names (one per line) in `event_dictionary.txt` in the root directory.
+- To filter candidate benign events by a predefined dictionary, create `event_dictionary.txt` in the root directory. Each line should list a benign process or event name.
 
 ---
 
 ## Running Cerberus
 
-Cerberus supports training phase poisoning, inference (test) phase poisoning, or both.
+Cerberus supports three evaluation modes:
+- `train`: inject poisoning samples into the training set
+- `infer`: inject adversarial samples into the test set (mimicry attack)
+- `both`: combine both types of attacks
 
-**Basic usage:**
+### Basic usage:
 
 ```bash
 python cerberus.py --dataset trace --num 500 --mode both
 ```
 
-**Key arguments:**
+### Arguments:
 
-- `--dataset`    Dataset name: `trace` for DARPA, `S1` for ATLAS S1
-- `--num`        Number of poisoning/insertion events (e.g. 100–1000)
-- `--split`      Training/test split ratio (default: 0.7)
-- `--mode`       Evaluation mode: `train` (poison training), `infer` (poison test), or `both`
-- `--dict_filter` (optional): Only select events from `event_dictionary.txt` for insertion
+- `--dataset`  Name of the dataset: `trace` for DARPA, `S1` for ATLAS S1
+- `--num`    Number of events to inject (e.g., 100–1000)
+- `--split`   Training/test split ratio (default: 0.7)
+- `--mode`   Evaluation mode: `train`, `infer`, or `both`
+- `--dict_filter` (Optional) Only use benign events from `event_dictionary.txt`
 
-**Example commands:**
+### Example Commands:
 
-- **DARPA, 500 poisoning events, dictionary filtering:**
+- **DARPA, 500 poisoned events, using dictionary filtering:**
   ```bash
   python cerberus.py --dataset trace --num 500 --mode both --dict_filter
   ```
 
-- **S1, test set poisoning only:**
+- **ATLAS S1, test set evasion only:**
   ```bash
   python cerberus.py --dataset S1 --num 300 --mode infer
   ```
@@ -67,43 +81,44 @@ python cerberus.py --dataset trace --num 500 --mode both
 
 ## Output Details
 
-- **DARPA:**
-  - Outputs `cerberus_train.json` and `cerberus_test.json` as JSON Lines (each line: raw event JSON)
+- **DARPA (trace):**
+  - Outputs: `cerberus_train.json` and `cerberus_test.json`
+  - Format: standard CDM JSON Lines
 
 - **ATLAS S1:**
-  - Outputs in S1-native format under `dataset/S1/logs/`:
+  - Outputs native-format logs under `dataset/S1/logs/`:
     - `cerberus_train_firefox.txt`, `cerberus_train_dns`
     - `cerberus_test_firefox.txt`, `cerberus_test_dns`
-  - These files can be directly reused by S1 log analysis code.
+
+These outputs are fully compatible with IDS pipelines such as MAGIC and Airtag.
 
 ---
 
-## Evaluating Robustness Metrics
-
-Cerberus includes scripts to calculate DAD, FPA, and ESR based on your model outputs. These scripts require both poisoned and baseline (clean) results as input.
-
 ## Using MAGIC and Airtag
 
-You can directly use [MAGIC](https://github.com/FDUDSDE/MAGIC) and [Airtag](https://github.com/dhl123/Airtag-2023) with Cerberus output and metrics scripts.
+Cerberus is designed to work seamlessly with two representative IDS tools:
 
-### 1. Run MAGIC
+- [MAGIC (FDUDSDE)](https://github.com/FDUDSDE/MAGIC)
+- [Airtag (DHL123)](https://github.com/dhl123/Airtag-2023)
 
-- Refer to the [MAGIC repository](https://github.com/FDUDSDE/MAGIC) for installation and training instructions.
-- After running MAGIC, **save the standard output** containing lines such as:
+### 1. Running MAGIC
+
+- Follow the MAGIC repo instructions for training/testing.
+- Save the console output containing:
   ```
-  TN: 615452
-  FN: 14
-  TP: 68072
-  FP: 569
+  TN: ...
+  FN: ...
+  TP: ...
+  FP: ...
   ```
-  to:
-    - `magic_result.txt` (poisoned/attacked results)
-    - `magic_baseline.txt` (clean/baseline results)
+  into:
+  - `magic_result.txt` (attacked output)
+  - `magic_baseline.txt` (clean baseline)
 
-### 2. Run Airtag
+### 2. Running Airtag
 
-- Refer to [Airtag's repository](https://github.com/dhl123/Airtag-2023) for installation and training.
-- When running Airtag, save the output block containing:
+- Follow the Airtag repo instructions for execution.
+- Save the test result block like:
   ```
   test1
   <TP>
@@ -111,24 +126,20 @@ You can directly use [MAGIC](https://github.com/FDUDSDE/MAGIC) and [Airtag](http
   <FP>
   <TN>
   ```
-  to:
-    - `airtag_result.txt` (poisoned/attacked results)
-    - `airtag_baseline.txt` (clean/baseline results)
+  into:
+  - `airtag_result.txt` (attacked output)
+  - `airtag_baseline.txt` (clean baseline)
 
 ---
 
 ## Calculating Metrics
-
-Place the result files in the script directory, then run:
 
 ```bash
 python magic_eval.py
 python airtag_eval.py
 ```
 
-The scripts will read both poisoned and baseline results and print the following metrics: **DAD, FPA, ESR**.
-
-**Example output:**
+### Sample Output:
 
 ```
 === magic Metrics ===
@@ -146,4 +157,4 @@ ESR: 0.003210
 
 ---
 
-**Cerberus: A Comprehensive Framework for Evaluating the Robustness of Intrusion Detection Systems.**
+**Cerberus: A comprehensive, reproducible, and scalable framework for stress-testing IDS robustness.**
